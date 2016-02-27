@@ -1,5 +1,8 @@
 'use strict'
 
+
+var rendererStats  = new THREEx.RendererStats();
+
 var scene,
     renderer,
     pointLight,
@@ -17,11 +20,11 @@ var scene,
     ran,
     prevRan,
     g_memPts,
+    memGraph,
     spritey;
 
 
-    function makeTextSprite( message, parameters )
-    {
+    function makeTextSprite( message, parameters ){
     	if ( parameters === undefined ) parameters = {};
 
     	var fontface = parameters.hasOwnProperty("fontface") ?
@@ -57,7 +60,7 @@ var scene,
     								  + borderColor.b + "," + borderColor.a + ")";
 
     	context.lineWidth = borderThickness;
-    //	roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
+      //roundRect(context, borderThickness/2, borderThickness/2, textWidth + borderThickness, fontsize * 1.4 + borderThickness, 6);
     	// 1.4 is extra height factor for text below baseline: g,j,p,q.
 
     	// text color
@@ -76,8 +79,14 @@ var scene,
     	return sprite;
     }
 
-
 function init(){
+
+  rendererStats.domElement.style.position   = 'absolute';
+rendererStats.domElement.style.left  = '0px';
+rendererStats.domElement.style.bottom    = '0px';
+document.body.appendChild( rendererStats.domElement );
+
+
   date = new Date();
   updateTime = 3;
   graphYPoint = 0;
@@ -85,7 +94,7 @@ function init(){
   buildScene();
   initGraph();
   updateGraph();
-  setInterval(function(){  getMem(); updateGraph(false); }, 1000);
+  setInterval(function(){  getMem(); updateGraph(false);  }, 1000);
   render();
 
 }
@@ -96,7 +105,7 @@ function buildScene() {
       sphere;
 
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 100, 2000 );
+  camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 9999999999 );
   pointLight = new THREE.HemisphereLight(0x00000, 10000000, 1000, new THREE.Vector3(100,300,100));
   hemLight = new THREE.HemisphereLight(0x66666, 0x666666, 100000000);
   renderer = new THREE.WebGLRenderer();
@@ -125,18 +134,20 @@ function buildScene() {
 }
 
 function getMem(){
+/*
   $.getJSON( "http://107.170.193.27:4567/results/test/cpu_usage", function( json ) {
     prevRan = ran;
     var v = json.check.output;
     var arr = v.split(": ");
     console.log(arr);
     var arr2 = arr[1].split("%");
-        console.log(arr2);
-    graphYPoint = arr2[0];
+        console.log(arr2[0]);
+    graphYPoint = Number(arr2[0]);
     return;
    });
-
-//graphYPoint = Math.random() * 100;
+*/
+graphYPoint = Math.random() * 100;
+console.log(graphYPoint);
 return;
 }
 
@@ -146,9 +157,11 @@ function initGraph(){
   count = 0;
   ran = Math.random() * 100;
   prevRan = 0;
-  g_memPts = [];
-  g_memPts.push( new THREE.Vector2 ( 0, 0) );
-  g_memPts.push( new THREE.Vector2 ( 0, 0) );
+  g_memPts = [[]];
+  //g_memPts.push( new THREE.Vector2 ( 0, 0) );
+  //g_memPts.push( new THREE.Vector2 ( 0, 0) );
+  //g_memPts.push([0,0]);
+
 }
 
 function updateGraph(temp){
@@ -156,12 +169,11 @@ function updateGraph(temp){
       prevXPt,
       memShape,
     //  memGeo
-      memGraph,
       memExtrudeSettings,
       memExtrude,
       numToRemove;
-
-graphXPoint += 50;
+scene.remove( memGraph );
+  graphXPoint += 50;
   if(temp == true){
     numToRemove = 2;
   }
@@ -173,22 +185,33 @@ graphXPoint += 50;
   sizeOfArr = g_memPts.length;
   prevXPt = g_memPts[Math.round((sizeOfArr - 1) / 2)].x;
 
-  g_memPts.splice(sizeOfArr/2, numToRemove, new THREE.Vector2(graphXPoint, 0), new THREE.Vector2(graphXPoint, graphYPoint));
+  //g_memPts.splice(sizeOfArr/2, numToRemove, new THREE.Vector2(graphXPoint, 0), new THREE.Vector2(graphXPoint, graphYPoint));
+  //g_memPts.push([graphXPoint, graphYPoint]);
+  g_memPts.push([graphXPoint, graphYPoint]);
    //g_memPts.splice(sizeOfArr/2, 0, new THREE.Vector2(Number(prevXPt)+50, 0), new THREE.Vector2(Number(prevXPt)+50, (Math.random() * 100)));
 
-   memShape = new THREE.Shape( g_memPts );
+   //memShape = new THREE.Shape( g_memPts );
+   memShape = new THREE.Shape();
+   memShape.moveTo(1,1);
+
+   for(let i = 0; i < g_memPts.length; i++) {
+
+     memShape.lineTo(g_memPts[i][0], g_memPts[i][1]);
+    }
+   memShape.lineTo(graphXPoint,0);
    //memGeo = new THREE.ShapeGeometry( memShape );
    memExtrudeSettings = { amount: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 10 };
    memExtrude= new THREE.ExtrudeGeometry( memShape, memExtrudeSettings );
 
-   memGraph = new THREE.Mesh(memExtrude, new THREE.MeshPhongMaterial( {color: 0x000000, wireframe: false}));
+   memGraph = new THREE.Mesh(memExtrude, new THREE.MeshPhongMaterial( {side: THREE.DoubleSide, color: 0x008080, wireframe: false}));
 camera.position.x = camera.position.x + 50;
 scene.remove( spritey );
+
 spritey = makeTextSprite( Math.floor(graphYPoint).toString()+'%',
 		{ fontsize: 24, borderColor: {r:255, g:0, b:0, a:1.0}, backgroundColor: {r:255, g:100, b:100, a:0.8} } );
 	spritey.position.set(graphXPoint+50,graphYPoint,0);
 	scene.add( spritey );
-    scene.add(memGraph);
+  scene.add( memGraph );
 }
 
 function animMemGraph(pt){
@@ -206,7 +229,7 @@ function animMemGraph(pt){
    extrudeSettings = { amount: 8, bevelEnabled: true, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 10 };
    extrude= new THREE.ExtrudeGeometry( memShape, extrudeSettings );
 
-   memGraph = new THREE.Mesh(extrude, new THREE.MeshPhongMaterial( {color: 0x000000, wireframe: false}));
+   memGraph = new THREE.Mesh(extrude, new THREE.MeshBasicMaterial( {color: 0x0000FF, wireframe: false}));
 
    //camera.position.x = camera.position.x + 50;
 }
@@ -214,6 +237,7 @@ function animMemGraph(pt){
 
 
 var render = function() {
+  rendererStats.update(renderer);
 requestAnimationFrame( render );
   /*
   date = new Date();
