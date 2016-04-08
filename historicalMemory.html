@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Historical Memory</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+		<link rel="stylesheet" type="text/css" href="css/styles.css">
+	</head>
+	<body>
+		<div id='options'>
+			<li>
+				<label class="checkbox">
+					<strong>Thesis</strong>
+				</label>
+				<ul>
+					<li>
+							<label class="checkbox">
+									<input type="checkbox" name="" value="" onclick="setControlsTarget(1)">setLock</label>
+					</li>
+                <li>
+                    <label class="checkbox">
+                        <input type="checkbox" name="" value="" onclick="getMem('thesis', 'memory', 1, 1)">Memory</label>
+                </li>
+                <li>
+                    <label class="checkbox">
+                        <input type="checkbox" name="" value="" onclick="getMem('thesis', 'CPU', 1, 1)">CPU</label>
+                </li>
+                <li>
+                    <label class="checkbox">
+                        <input type="checkbox" name="" value="" onclick="getMem('thesis', 'response', 100, 1)">Response Time</label>
+                </li>
+            </ul>
+        </li>
+				<li>
+					<label class="checkbox">
+						<strong>Sona</strong>
+					</label>
+					<ul>
+						<li>
+								<label class="checkbox">
+										<input type="checkbox" name="" value="" onclick="setControlsTarget(2)">setLock</label>
+						</li>
+									<li>
+											<label class="checkbox">
+													<input type="checkbox" name="" value="" onclick="getMem('sona', 'memory', 1, 2)">Memory</label>
+									</li>
+									<li>
+											<label class="checkbox">
+													<input type="checkbox" name="" value="" onclick="getMem('sona', 'CPU', 1, 2)">CPU</label>
+									</li>
+									<li>
+											<label class="checkbox">
+													<input type="checkbox" name="" value="" onclick="getMem('sona', 'response', 100, 2)">Response Time</label>
+									</li>
+							</ul>
+					</li>
+					<li>
+						<label class="checkbox">
+							<strong>Zilean</strong>
+						</label>
+						<ul>
+							<li>
+									<label class="checkbox">
+											<input type="checkbox" name="" value="" onclick="setControlsTarget(3)">setLock</label>
+							</li>
+										<li>
+												<label class="checkbox">
+														<input type="checkbox" name="" value="" onclick="getMem('zilean', 'memory', 1, 3)">Memory</label>
+										</li>
+										<li>
+												<label class="checkbox">
+														<input type="checkbox" name="" value="" onclick="getMem('zilean', 'CPU', 1, 3)">CPU</label>
+										</li>
+										<li>
+												<label class="checkbox">
+														<input type="checkbox" name="" value="" onclick="getMem('zilean', 'response', 100, 3)">Response Time</label>
+										</li>
+								</ul>
+						</li>
+		</div>
+		<script src="js/three.min.js"></script>
+				<script src="js/Octree.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/historicalMemory.js"></script>
+    <script src="js/Stats.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+		<script>
+			window.onload = init();
+		</script>
+	</body>
+</html>
