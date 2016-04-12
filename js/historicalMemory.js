@@ -25,12 +25,17 @@ var prevY = 0;
 
 graphTWidth = 0;
 
+
+var mergedGraphs = [];
+
 function init() {
   buildScene();
   loadFont();
   render();
   update();
 }
+
+
 
 function addControls() {
   var checkbox = document.createElement('input');
@@ -206,10 +211,12 @@ function getMem(server, metric, scale, cluster) {
 
   p1.then(function() {
     console.log('ran');
-    buildGraph(scale, cluster, server, metric);
+    buildGraph2(scale, cluster, server, metric);
 
   });
 }
+
+
 
 function createGrid(opts) {
   var line;
@@ -265,8 +272,302 @@ function loadFont() {
   });
 }
 
+var graph = {
+  graph: [],
+  mergedCubesAll: [],
+  init: function(server, metric, scale, cluster) {
+    this.buildInitObjs();
+    this.buildData(server, metric, scale, cluster);
 
-function buildGraph(scale, cluster, server, metric) {
+  },
+  buildInitObjs: function() {
+    this.mergedCubes = new THREE.Geometry();
+    this.planeMaterial = new THREE.MeshLambertMaterial({
+      color: 0xffffff,
+      shading: THREE.SmoothShading,
+      vertexColors: THREE.VertexColors
+    });
+    this.planeGeometry = new THREE.PlaneGeometry(6000, 6000, 50, 50);
+    this.mergedCubes.dynamic = true;
+    this.parentMesh = new THREE.Mesh(this.mergedCubes, this.planeMaterial);
+    this.parentMesh.name = 'kev';
+    this.parentMesh.geometry.dynamic = true;
+    this.parentMesh.geometry.verticesNeedUpdate = true;
+    this.posZ = 0;
+    this.posX = 0;
+    this.posY = 0;
+    this.size = 100;
+  },
+  buildData: function(server, metric, scale, cluster) {
+    var that = this;
+    this.p1 = new Promise(
+      function(resolve, reject) {
+        $.getJSON("http://107.170.193.27:8080/api/" + metric + "/client/" + server, function(json) {
+          that.points = json;
+          resolve(that.points);
+        });
+      }
+    );
+
+    this.p1.then(function(result) {
+      graph.buildGraph(server, metric, scale, cluster);
+    });
+  },
+  buildGraph: function(server, metric, scale, cluster) {
+    var that = this;
+    this.points.map(function(i) {
+      that.curTimeStamp = i.time;
+      that.curDay = that.curTimeStamp.split('T');
+      that.curHour = that.curDay[1].split(':');
+      that.curHour = that.curHour[0];
+      that.curDay = that.curDay[0];
+
+      if (that.curHour != that.hourStamp) {
+        that.hourStamp = that.curHour;
+        that.posX += 100;
+        that.posY = 0;
+      }
+
+      if (that.curDay != that.dayStamp) {
+        that.dayStamp = that.curDay;
+        that.posX += 500;
+        that.posY = 0;
+      }
+
+      that.posZ = i.value * 10 * scale;
+      that.boxGeometry = new THREE.BoxGeometry(50, 50, that.posZ, 1, 1);
+
+      for (var m = 0; m < that.boxGeometry.faces.length; m++) {
+        that.face = that.boxGeometry.faces[m];
+        that.face.color.setRGB((that.posZ / 10) * .01, 1 - ((that.posZ / 10) * .01), 0);
+      }
+
+      that.cube = new THREE.Mesh(that.boxGeometry, that.planeMaterial);
+      that.cid = that.cube.id;
+
+      that.cube.position.x = that.posX;
+      that.cube.position.y = that.posY;
+      that.cube.position.z = that.posZ / 2;
+
+      that.cube.updateMatrix();
+      that.cube.geometry.colorsNeedUpdate = true;
+
+      that.cube.timeStamp = i.time;
+
+      that.mergedCubes.merge(that.cube.geometry, that.cube.matrix);
+
+
+      /*  planeGeometry.vertices[i].z = Math.floor((Math.random() * 100));
+
+        var time = points[i].time;
+        time = time.split('T');
+
+        spritey = makeTextSprite( time[1],
+          { fontsize: 50,
+            borderColor: {r:255, g:0, b:0, a:1.0},
+            backgroundColor: {r:255, g:100, b:100, a:0.8}
+          } );
+        spritey.position.set(planeGeometry.vertices[i].x,planeGeometry.vertices[i].y,posZ+100);
+        //scene.add( spritey );
+        */
+      that.posY += 100;
+    });
+
+    this.mergedCubes = that.mergedCubes;
+    this.mergedCubesCenter = this.mergedCubes.center();
+    //  that.textParams.size = 500;
+    //  this.parentMesh = new THREE.Mesh(this.mergedCubes, this.planeMaterial);
+
+        this.parentMesh.finalPosY = 0 + (this.graph.length*10000);
+      this.parentMesh.position.y = this.parentMesh.finalPosY;
+
+
+    this.parentMesh.position.z = (this.parentMesh.geometry.boundingBox.max.z+Math.abs(this.parentMesh.geometry.boundingBox.min.z))/2;
+    scene.add(this.parentMesh);
+    this.mergedCubesAll.push(this.mergedCubes);
+    this.parentMesh.server = server;
+    this.parentMesh.metric = metric;
+    this.parentMesh.scale2 = scale;
+    this.parentMesh.cluster = cluster;
+    this.parentMesh.firstRun = 0;
+
+    this.graph.push(this.parentMesh);
+
+
+    this.liveUpdate(server, metric, scale, cluster);
+  },
+  liveUpdate: function(server, metric, scale, cluster) {
+
+    this.intervalID = setInterval(
+      (function(self) {
+        return function() {
+          self.updateGraph();
+        }
+      })(this),
+      30000
+    );
+  },
+  liveMetric: function(graph) {
+    if(graph.metric == 'response'){
+      graph.metric = 'metric_curl';
+    }
+    if(graph.metric == 'memory'){
+      graph.metric = 'ram';
+    }
+
+    return $.getJSON("http://107.170.193.27:4567/results/" + graph.server + "/" + graph.metric).then(function(json) {
+      var d = new Date();
+
+      var output = json.check.output.split('fin');
+
+      var posX = 0;
+      var posY = false;
+
+      var curHour = d.getHours();
+      var curDay = d.getDay();
+
+      if (curHour != graph.hourStamp) {
+        console.log('hour');
+        graph.hourStamp = curHour;
+        posX += 100;
+        posY = true;
+      }
+
+      if (curDay != graph.dayStamp) {
+        console.log('day');
+        graph.dayStamp = curDay;
+        posX += 500;
+        posY = true;
+      }
+      //  scene.remove(that.graph[i]);
+
+      var planeMaterial = new THREE.MeshLambertMaterial({
+        color: 0xffffff,
+        vertexColors: THREE.VertexColors
+      });
+
+      var boxGeometry = new THREE.BoxGeometry(50, 50, output[1] * 10 * graph.scale2, 1, 1);
+      var cube = new THREE.Mesh(boxGeometry, planeMaterial);
+      for (var m = 0; m < boxGeometry.faces.length; m++) {
+        var face = boxGeometry.faces[m];
+        face.color.setRGB((output[1]) * .01, 1 - (output[1]* .01), 0);
+      }
+
+
+    //  var first = that.mergedCubesAll[i];
+
+      graph.updateMatrix();
+      var geoLen = graph.geometry.vertices.length;
+      console.log(graph.geometry.vertices[geoLen - 1]);
+      if(posY == true){
+        cube.position.y = 0;
+      }
+      else{
+        console.log(graph);
+        if(graph.firstRun == 0) {
+          console.log('asdasdasdasdasd');
+          cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100 + graph.position.y;
+        }
+        else{
+          cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100;
+        }
+        console.log(cube.position.y);
+      }
+console.log(posX);
+      cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX;
+      cube.position.z = (output[1] * 10 * graph.scale2)/2;
+
+      console.log(graph.geometry);
+      //cube.position.z = that.graph[i].geometry.vertices[geoLen-1].z/2;
+
+      cube.updateMatrix();
+      //  scene.add(cube);
+      graph.geometry.dynamic = true;
+      graph.geometry.merge(cube.geometry, cube.matrix);
+      graph.geometry.mergeVertices();
+      scene.add(cube);
+      graph.firstRun = 1;
+      return json;
+    });
+  },
+  updateGraph: function() {
+    var that = this;
+
+    for (var i = 0; i < that.graph.length; i++) {
+      var d = new Date();
+
+      that.graph[i].hourStamp = d.getHours();
+      that.graph[i].dayStamp = d.getDay();
+      that.liveMetric(that.graph[i]).always(function(result){
+        // console.log('second');
+        // scene.remove(that.graph[i]);
+        // that.graph[i].geometry.dispose();
+        // //  scene.remove(that.graph[i]);
+        //
+        // var planeMaterial = new THREE.MeshLambertMaterial({
+        //   color: 0xffffff,
+        //   vertexColors: THREE.VertexColors
+        // });
+        // var boxGeometry = new THREE.BoxGeometry(50, 50, Math.random() * 10000, 1, 1);
+        // var cube = new THREE.Mesh(boxGeometry, planeMaterial);
+        //
+        // cube.material.color = new THREE.Color(1, 0, 0);
+        // var first = that.mergedCubesAll[i];
+        //
+        // that.graph[i].updateMatrix();
+        // var geoLen = that.graph[i].geometry.vertices.length;
+        // console.log(that.graph[i].geometry.vertices[geoLen - 1]);
+        // cube.position.y = that.graph[i].geometry.vertices[geoLen - 1].y + 100;
+        // cube.position.x = that.graph[i].geometry.vertices[geoLen - 1].x + 25;
+        // //cube.position.z = that.graph[i].geometry.vertices[geoLen-1].z/2;
+        //
+        // cube.updateMatrix();
+        // //  scene.add(cube);
+        // that.graph[i].geometry.dynamic = true;
+        // scene.add(cube);
+        // //  scene.remove(cube);
+        // that.graph[i].geometry.merge(cube.geometry, cube.matrix);
+        // that.graph[i].geometry.mergeVertices();
+        // that.graph[i].geometry.verticesNeedUpdate = true;
+        // that.graph[i].geometry.elementsNeedUpdate = true;
+        // that.graph[i].geometry.morphTargetsNeedUpdate = true;
+        // that.graph[i].geometry.uvsNeedUpdate = true;
+        // that.graph[i].geometry.normalsNeedUpdate = true;
+        // that.graph[i].geometry.colorsNeedUpdate = true;
+        // that.graph[i].geometry.tangentsNeedUpdate = true;
+        // that.graph[i].geometry.groupsNeedUpdate = true;
+        //
+        // console.log(that.graph[i].geometry);
+        // // console.log(that.graph[i].geometry);
+        // that.graph[i].geometry = that.graph[i].geometry;
+        // scene.add(that.graph[i]);
+      });
+
+
+    }
+
+    //  that.parentMesh.position.y = that.parentMesh.position.y+30000;
+    //
+    // that.boxGeometry = new THREE.BoxGeometry(50, 50, Math.random() * 100, 1, 1);
+    // that.cube = new THREE.Mesh(that.boxGeometry, that.planeMaterial);
+    //
+    // that.cube.posY = Math.random() *100;
+    //       that.cube.updateMatrix();
+    // that.mergedCubes.merge(that.cube.geometry, that.cube.matrix);
+
+    //  scene.remove(that.parentMesh);
+
+
+
+
+  }
+};
+
+function modular(server, metric, scale, cluster) {
+  graph.init(server, metric, scale, cluster);
+}
+
+function buildGraph2(scale, cluster, server, metric) {
 
   var planeMaterial,
     planeGeometry,
@@ -373,6 +674,8 @@ function buildGraph(scale, cluster, server, metric) {
     objects.push(cube);
 
     mergedCubes.merge(cube.geometry, cube.matrix);
+
+
     /*  planeGeometry.vertices[i].z = Math.floor((Math.random() * 100));
 
       var time = points[i].time;
@@ -393,11 +696,11 @@ function buildGraph(scale, cluster, server, metric) {
 
   textGeometry = new THREE.TextGeometry(server + ' ' + metric, textParams);
 
-   for (var m = 0; m < textGeometry.faces.length; m++) {
-     counts++;
-     face = textGeometry.faces[m];
-     face.color.setRGB(0, 0, 0);
-   }
+  for (var m = 0; m < textGeometry.faces.length; m++) {
+    counts++;
+    face = textGeometry.faces[m];
+    face.color.setRGB(0, 0, 0);
+  }
 
   var textMesh1 = new THREE.Mesh(textGeometry, planeMaterial);
 
@@ -418,6 +721,7 @@ function buildGraph(scale, cluster, server, metric) {
   prevY = parentMesh.position.y;
   clusterPos.push(parentMesh);
   scene.add(parentMesh);
+  console.log(parentMesh);
   textMesh1 = {};
   mergedCubes = {};
   parentMesh = {};
