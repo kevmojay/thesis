@@ -55,7 +55,7 @@ function addControls() {
 }
 
 //Creates text sprite to append to end of graph
-function makeTextSprite(message, parameters) {
+function makeTextSprite(message, parameters, scale) {
   if (parameters === undefined) parameters = {};
 
   var fontface = parameters.hasOwnProperty("fontface") ?
@@ -116,7 +116,7 @@ function makeTextSprite(message, parameters) {
     map: texture
   });
   var sprite = new THREE.Sprite(spriteMaterial);
-  sprite.scale.set(1000, 1000, 1.0);
+  sprite.scale.set(scale, scale, 1.0);
   return sprite;
 }
 
@@ -315,6 +315,43 @@ var graph = {
   },
   buildGraph: function(server, metric, scale, cluster) {
     var that = this;
+    var spritey = makeTextSprite(server, {
+      fontsize: 50,
+      borderColor: {
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 1.0
+      },
+      backgroundColor: {
+        r: 255,
+        g: 100,
+        b: 100,
+        a: 0.8
+      }
+    }, 3000);
+    spritey.position.set(that.posX, that.posY+((that.graph.length*10000)), 2000);
+    spritey.updateMatrix();
+    scene.add(spritey);
+
+    var spritey = makeTextSprite(metric, {
+      fontsize: 50,
+      borderColor: {
+        r: 255,
+        g: 0,
+        b: 0,
+        a: 1.0
+      },
+      backgroundColor: {
+        r: 255,
+        g: 100,
+        b: 100,
+        a: 0.8
+      }
+    }, 3000);
+    spritey.position.set(that.posX, that.posY+((that.graph.length*10000)), 1000);
+    spritey.updateMatrix();
+    scene.add(spritey);
     this.points.map(function(i) {
       that.curTimeStamp = i.time;
       that.curDay = that.curTimeStamp.split('T');
@@ -326,12 +363,49 @@ var graph = {
         that.hourStamp = that.curHour;
         that.posX += 100;
         that.posY = 0;
+        var spritey = makeTextSprite(that.hourStamp, {
+          fontsize: 50,
+          borderColor: {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 1.0
+          },
+          backgroundColor: {
+            r: 255,
+            g: 100,
+            b: 100,
+            a: 0.8
+          }
+        }, 250);
+        spritey.position.set(that.posX-50, that.posY-(2000-(that.graph.length*10000)), 0);
+        spritey.updateMatrix();
+        scene.add(spritey);
       }
 
       if (that.curDay != that.dayStamp) {
         that.dayStamp = that.curDay;
         that.posX += 500;
         that.posY = 0;
+
+        var spritey = makeTextSprite(that.dayStamp, {
+          fontsize: 50,
+          borderColor: {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 1.0
+          },
+          backgroundColor: {
+            r: 255,
+            g: 100,
+            b: 100,
+            a: 0.8
+          }
+        }, 350);
+        spritey.position.set(that.posX-50, that.posY+(2000+(that.graph.length*10000)), 0);
+        spritey.updateMatrix();
+        scene.add(spritey);
       }
 
       that.posZ = i.value * 10 * scale;
@@ -348,8 +422,10 @@ var graph = {
       that.cube.position.x = that.posX;
       that.cube.position.y = that.posY;
       that.cube.position.z = that.posZ / 2;
-
       that.cube.updateMatrix();
+
+
+
       that.cube.geometry.colorsNeedUpdate = true;
 
       that.cube.timeStamp = i.time;
@@ -378,11 +454,12 @@ var graph = {
     //  that.textParams.size = 500;
     //  this.parentMesh = new THREE.Mesh(this.mergedCubes, this.planeMaterial);
 
-        this.parentMesh.finalPosY = 0 + (this.graph.length*10000);
-      this.parentMesh.position.y = this.parentMesh.finalPosY;
+    this.parentMesh.finalPosY = 0 + (this.graph.length*10000);
+    this.parentMesh.position.y = this.parentMesh.finalPosY;
 
 
     this.parentMesh.position.z = (this.parentMesh.geometry.boundingBox.max.z+Math.abs(this.parentMesh.geometry.boundingBox.min.z))/2;
+    this.parentMesh.position.x = (this.parentMesh.geometry.boundingBox.max.x+Math.abs(this.parentMesh.geometry.boundingBox.min.x))/2+500;
     scene.add(this.parentMesh);
     this.mergedCubesAll.push(this.mergedCubes);
     this.parentMesh.server = server;
@@ -392,7 +469,6 @@ var graph = {
     this.parentMesh.firstRun = 0;
 
     this.graph.push(this.parentMesh);
-
 
     this.liveUpdate(server, metric, scale, cluster);
   },
@@ -430,7 +506,7 @@ var graph = {
         console.log('hour');
         graph.hourStamp = curHour;
         posX += 100;
-        posY = true;
+        posY = false;
       }
 
       if (curDay != graph.dayStamp) {
@@ -447,6 +523,7 @@ var graph = {
       });
 
       var boxGeometry = new THREE.BoxGeometry(50, 50, output[1] * 10 * graph.scale2, 1, 1);
+      //output[1] * 10 * graph.scale2
       var cube = new THREE.Mesh(boxGeometry, planeMaterial);
       for (var m = 0; m < boxGeometry.faces.length; m++) {
         var face = boxGeometry.faces[m];
@@ -465,23 +542,29 @@ var graph = {
       else{
         console.log(graph);
         if(graph.firstRun == 0) {
-          console.log('asdasdasdasdasd');
+          //console.log(graph.geometry.vertices[geoLen - 1].y);
           cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100 + graph.position.y;
         }
         else{
           cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100;
         }
-        console.log(cube.position.y);
+        console.log('y: '+cube.position.y);
       }
-console.log(posX);
-      cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX;
+
+      if(graph.firstRun == 0){
+        console.log('buymmmmmm');
+        cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX + (graph.geometry.boundingBox.max.x+Math.abs(graph.geometry.boundingBox.min.x))/2+500;
+      }
+      else {
+        cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX;
+      }
+      console.log('x '+cube.position.x);
       cube.position.z = (output[1] * 10 * graph.scale2)/2;
 
-      console.log(graph.geometry);
+
       //cube.position.z = that.graph[i].geometry.vertices[geoLen-1].z/2;
 
       cube.updateMatrix();
-      //  scene.add(cube);
       graph.geometry.dynamic = true;
       graph.geometry.merge(cube.geometry, cube.matrix);
       graph.geometry.mergeVertices();
@@ -499,6 +582,7 @@ console.log(posX);
       that.graph[i].hourStamp = d.getHours();
       that.graph[i].dayStamp = d.getDay();
       that.liveMetric(that.graph[i]).always(function(result){
+    
         // console.log('second');
         // scene.remove(that.graph[i]);
         // that.graph[i].geometry.dispose();
@@ -720,8 +804,9 @@ function buildGraph2(scale, cluster, server, metric) {
   parentMesh.position.y = prevY + 10000;
   prevY = parentMesh.position.y;
   clusterPos.push(parentMesh);
+
   scene.add(parentMesh);
-  console.log(parentMesh);
+
   textMesh1 = {};
   mergedCubes = {};
   parentMesh = {};
