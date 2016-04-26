@@ -17,7 +17,7 @@ var mouse = {
   y: 0
 };
 var intersected;
-var objects = [];
+var finalCubeObjects = [];
 var baseColor = 0x333333;
 var intersectColor = 0x00D66B;
 var clusterPos = [];
@@ -30,7 +30,6 @@ var mergedGraphs = [];
 
 function init() {
   buildScene();
-  loadFont();
   render();
   update();
 }
@@ -141,23 +140,23 @@ function buildScene() {
   sphere = new THREE.SphereGeometry(10, 16, 8);
 
   var light = new THREE.AmbientLight(0x404040); // soft white light
-
-  pointLight.add(new THREE.Mesh(sphere,
-    new THREE.MeshBasicMaterial({
-      color: 0xff0040
-    })));
-  pointLight2.add(new THREE.Mesh(sphere,
-    new THREE.MeshBasicMaterial({
-      color: 0xff0040
-    })));
-  pointLight3.add(new THREE.Mesh(sphere,
-    new THREE.MeshBasicMaterial({
-      color: 0xff0040
-    })));
-  pointLight4.add(new THREE.Mesh(sphere,
-    new THREE.MeshBasicMaterial({
-      color: 0xff0040
-    })));
+  //
+  // pointLight.add(new THREE.Mesh(sphere,
+  //   new THREE.MeshBasicMaterial({
+  //     color: 0xff0040
+  //   })));
+  // pointLight2.add(new THREE.Mesh(sphere,
+  //   new THREE.MeshBasicMaterial({
+  //     color: 0xff0040
+  //   })));
+  // pointLight3.add(new THREE.Mesh(sphere,
+  //   new THREE.MeshBasicMaterial({
+  //     color: 0xff0040
+  //   })));
+  // pointLight4.add(new THREE.Mesh(sphere,
+  //   new THREE.MeshBasicMaterial({
+  //     color: 0xff0040
+  //   })));
 
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0xBBBBBB);
@@ -165,19 +164,11 @@ function buildScene() {
   renderer.domElement.addEventListener('mousemove', onDocumentMouseMove, false);
   raycaster = new THREE.Raycaster();
 
-
-
-
-
-  //scene.add(hemLight);
-  axisHelper.rotation.x = -Math.PI / 2;
-  //scene.add( axisHelper );
-
   camera.position.z = 3000;
   camera.position.y = 0;
   camera.position.x = -4000;
   camera.rotation.x = 0;
-  camera.rotation.y = 100;
+  camera.rotation.y = 1000;
   camera.rotation.z = -Math.PI / 2;
   camera.up.set(0, 0, 1);
   controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -197,26 +188,6 @@ function buildScene() {
   scene.add(pointLight4);
   scene.add(light);
 }
-
-function getMem(server, metric, scale, cluster) {
-
-  var p1 = new Promise(
-    function(resolve, reject) {
-      $.getJSON("http://107.170.193.27:8080/api/" + metric + "/client/" + server, function(json) {
-        points = json;
-        resolve(points);
-      });
-    }
-  );
-
-  p1.then(function() {
-    console.log('ran');
-    buildGraph2(scale, cluster, server, metric);
-
-  });
-}
-
-
 
 function createGrid(opts) {
   var line;
@@ -263,24 +234,46 @@ function setControlsTarget(cluster) {
 
 }
 
-function loadFont() {
-  var loader = new THREE.FontLoader();
-  loader.load('fonts/helvetikar_regular.typeface.js', function(response) {
-    font = response;
-    console.log(font);
-    //refreshText();
-  });
-}
 
 var graph = {
   graph: [],
   mergedCubesAll: [],
   init: function(server, metric, scale, cluster) {
+
+
+    console.log('too');
     this.buildInitObjs();
     this.buildData(server, metric, scale, cluster);
 
+    console.log('fast');
+
   },
   buildInitObjs: function() {
+    this.opts = {
+    lines: 13 // The number of lines to draw
+  , length: 28 // The length of each line
+  , width: 14 // The line thickness
+  , radius: 42 // The radius of the inner circle
+  , scale: 1 // Scales overall size of the spinner
+  , corners: 1 // Corner roundness (0..1)
+  , color: '#000' // #rgb or #rrggbb or array of colors
+  , opacity: 0.25 // Opacity of the lines
+  , rotate: 0 // The rotation offset
+  , direction: 1 // 1: clockwise, -1: counterclockwise
+  , speed: 1 // Rounds per second
+  , trail: 60 // Afterglow percentage
+  , fps: 20 // Frames per second when using setTimeout() as a fallback for CSS
+  , zIndex: 2e9 // The z-index (defaults to 2000000000)
+  , className: 'spinner' // The CSS class to assign to the spinner
+  , top: '50%' // Top position relative to parent
+  , left: '50%' // Left position relative to parent
+  , shadow: false // Whether to render a shadow
+  , hwaccel: false // Whether to use hardware acceleration
+  , position: 'absolute' // Element positioning
+  }
+  this.target = document.getElementById('spin')
+  this.spinner = new Spinner(this.opts).spin(this.target);
+
     this.mergedCubes = new THREE.Geometry();
     this.planeMaterial = new THREE.MeshLambertMaterial({
       color: 0xffffff,
@@ -297,6 +290,8 @@ var graph = {
     this.posX = 0;
     this.posY = 0;
     this.size = 100;
+    this.cubeObjects = [];
+
   },
   buildData: function(server, metric, scale, cluster) {
     var that = this;
@@ -334,6 +329,7 @@ var graph = {
     spritey.updateMatrix();
     scene.add(spritey);
 
+
     var spritey = makeTextSprite(metric, {
       fontsize: 50,
       borderColor: {
@@ -352,6 +348,7 @@ var graph = {
     spritey.position.set(that.posX, that.posY+((that.graph.length*10000)), 1000);
     spritey.updateMatrix();
     scene.add(spritey);
+    console.log('points ' + this.points.length);
     this.points.map(function(i) {
       that.curTimeStamp = i.time;
       that.curDay = that.curTimeStamp.split('T');
@@ -360,10 +357,13 @@ var graph = {
       that.curDay = that.curDay[0];
 
       if (that.curHour != that.hourStamp) {
+
+        var printHour = parseInt(that.curHour)+1;
         that.hourStamp = that.curHour;
+
         that.posX += 100;
         that.posY = 0;
-        var spritey = makeTextSprite(that.hourStamp, {
+        var spritey = makeTextSprite(printHour, {
           fontsize: 50,
           borderColor: {
             r: 255,
@@ -410,7 +410,7 @@ var graph = {
 
       that.posZ = i.value * 10 * scale;
       that.boxGeometry = new THREE.BoxGeometry(50, 50, that.posZ, 1, 1);
-
+      that.boxGeometry.dynamic = true;
       for (var m = 0; m < that.boxGeometry.faces.length; m++) {
         that.face = that.boxGeometry.faces[m];
         that.face.color.setRGB((that.posZ / 10) * .01, 1 - ((that.posZ / 10) * .01), 0);
@@ -422,6 +422,8 @@ var graph = {
       that.cube.position.x = that.posX;
       that.cube.position.y = that.posY;
       that.cube.position.z = that.posZ / 2;
+
+      that.cube.metricValue = i.value;
       that.cube.updateMatrix();
 
 
@@ -429,37 +431,28 @@ var graph = {
       that.cube.geometry.colorsNeedUpdate = true;
 
       that.cube.timeStamp = i.time;
+      that.cube.dynamic = true;
+      that.cubeObjects.push(that.cube);
 
       that.mergedCubes.merge(that.cube.geometry, that.cube.matrix);
 
-
-      /*  planeGeometry.vertices[i].z = Math.floor((Math.random() * 100));
-
-        var time = points[i].time;
-        time = time.split('T');
-
-        spritey = makeTextSprite( time[1],
-          { fontsize: 50,
-            borderColor: {r:255, g:0, b:0, a:1.0},
-            backgroundColor: {r:255, g:100, b:100, a:0.8}
-          } );
-        spritey.position.set(planeGeometry.vertices[i].x,planeGeometry.vertices[i].y,posZ+100);
-        //scene.add( spritey );
-        */
       that.posY += 100;
     });
 
+    this.cubeObjects = that.cubeObjects;
     this.mergedCubes = that.mergedCubes;
     this.mergedCubesCenter = this.mergedCubes.center();
-    //  that.textParams.size = 500;
-    //  this.parentMesh = new THREE.Mesh(this.mergedCubes, this.planeMaterial);
 
     this.parentMesh.finalPosY = 0 + (this.graph.length*10000);
+    this.oldPMY = this.parentMesh.position.y - this.parentMesh.finalPosY
     this.parentMesh.position.y = this.parentMesh.finalPosY;
 
 
+    this.oldPMZ = this.parentMesh.position.z - (this.parentMesh.geometry.boundingBox.max.z+Math.abs(this.parentMesh.geometry.boundingBox.min.z))/2;
+    this.oldPMX = this.parentMesh.position.x =(this.parentMesh.geometry.boundingBox.max.x+Math.abs(this.parentMesh.geometry.boundingBox.min.x))/2+500;
     this.parentMesh.position.z = (this.parentMesh.geometry.boundingBox.max.z+Math.abs(this.parentMesh.geometry.boundingBox.min.z))/2;
     this.parentMesh.position.x = (this.parentMesh.geometry.boundingBox.max.x+Math.abs(this.parentMesh.geometry.boundingBox.min.x))/2+500;
+
     scene.add(this.parentMesh);
     this.mergedCubesAll.push(this.mergedCubes);
     this.parentMesh.server = server;
@@ -468,9 +461,35 @@ var graph = {
     this.parentMesh.cluster = cluster;
     this.parentMesh.firstRun = 0;
 
-    this.graph.push(this.parentMesh);
 
+
+    var that = this;
+
+    this.cubeObjects.map(function(cube){
+       cube.position.y += that.parentMesh.position.y-1750;
+       cube.position.x -= 90;
+       //cube.position.z += that.oldPMZ;
+       cube.verticesNeedUpdate = true;
+       cube.elementsNeedUpdate = true;
+       cube.morphTargetsNeedUpdate = true;
+       cube.uvsNeedUpdate = true;
+       cube.normalsNeedUpdate = true;
+       cube.colorsNeedUpdate = true;
+       cube.tangentsNeedUpdate = true;
+       finalCubeObjects.push(cube);
+       scene.add(cube);
+
+    });
+    var that = this;
+    setTimeout(function(){
+      that.cubeObjects.map(function(cube){
+        scene.remove(cube);
+      });
+   },1);
+
+    this.graph.push(this.parentMesh);
     this.liveUpdate(server, metric, scale, cluster);
+    this.spinner.stop();
   },
   liveUpdate: function(server, metric, scale, cluster) {
 
@@ -503,14 +522,12 @@ var graph = {
       var curDay = d.getDay();
 
       if (curHour != graph.hourStamp) {
-        console.log('hour');
         graph.hourStamp = curHour;
         posX += 100;
         posY = false;
       }
 
       if (curDay != graph.dayStamp) {
-        console.log('day');
         graph.dayStamp = curDay;
         posX += 500;
         posY = true;
@@ -535,12 +552,10 @@ var graph = {
 
       graph.updateMatrix();
       var geoLen = graph.geometry.vertices.length;
-      console.log(graph.geometry.vertices[geoLen - 1]);
       if(posY == true){
         cube.position.y = 0;
       }
       else{
-        console.log(graph);
         if(graph.firstRun == 0) {
           //console.log(graph.geometry.vertices[geoLen - 1].y);
           cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100 + graph.position.y;
@@ -548,17 +563,15 @@ var graph = {
         else{
           cube.position.y = graph.geometry.vertices[geoLen - 1].y + 100;
         }
-        console.log('y: '+cube.position.y);
       }
 
       if(graph.firstRun == 0){
-        console.log('buymmmmmm');
         cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX + (graph.geometry.boundingBox.max.x+Math.abs(graph.geometry.boundingBox.min.x))/2+500;
       }
       else {
         cube.position.x = graph.geometry.vertices[geoLen - 1].x + 25 + posX;
       }
-      console.log('x '+cube.position.x);
+
       cube.position.z = (output[1] * 10 * graph.scale2)/2;
 
 
@@ -569,6 +582,8 @@ var graph = {
       graph.geometry.merge(cube.geometry, cube.matrix);
       graph.geometry.mergeVertices();
       scene.add(cube);
+      cube.metricValue = output[1];
+      finalCubeObjects.push(cube);
       graph.firstRun = 1;
       return json;
     });
@@ -582,68 +597,8 @@ var graph = {
       that.graph[i].hourStamp = d.getHours();
       that.graph[i].dayStamp = d.getDay();
       that.liveMetric(that.graph[i]).always(function(result){
-    
-        // console.log('second');
-        // scene.remove(that.graph[i]);
-        // that.graph[i].geometry.dispose();
-        // //  scene.remove(that.graph[i]);
-        //
-        // var planeMaterial = new THREE.MeshLambertMaterial({
-        //   color: 0xffffff,
-        //   vertexColors: THREE.VertexColors
-        // });
-        // var boxGeometry = new THREE.BoxGeometry(50, 50, Math.random() * 10000, 1, 1);
-        // var cube = new THREE.Mesh(boxGeometry, planeMaterial);
-        //
-        // cube.material.color = new THREE.Color(1, 0, 0);
-        // var first = that.mergedCubesAll[i];
-        //
-        // that.graph[i].updateMatrix();
-        // var geoLen = that.graph[i].geometry.vertices.length;
-        // console.log(that.graph[i].geometry.vertices[geoLen - 1]);
-        // cube.position.y = that.graph[i].geometry.vertices[geoLen - 1].y + 100;
-        // cube.position.x = that.graph[i].geometry.vertices[geoLen - 1].x + 25;
-        // //cube.position.z = that.graph[i].geometry.vertices[geoLen-1].z/2;
-        //
-        // cube.updateMatrix();
-        // //  scene.add(cube);
-        // that.graph[i].geometry.dynamic = true;
-        // scene.add(cube);
-        // //  scene.remove(cube);
-        // that.graph[i].geometry.merge(cube.geometry, cube.matrix);
-        // that.graph[i].geometry.mergeVertices();
-        // that.graph[i].geometry.verticesNeedUpdate = true;
-        // that.graph[i].geometry.elementsNeedUpdate = true;
-        // that.graph[i].geometry.morphTargetsNeedUpdate = true;
-        // that.graph[i].geometry.uvsNeedUpdate = true;
-        // that.graph[i].geometry.normalsNeedUpdate = true;
-        // that.graph[i].geometry.colorsNeedUpdate = true;
-        // that.graph[i].geometry.tangentsNeedUpdate = true;
-        // that.graph[i].geometry.groupsNeedUpdate = true;
-        //
-        // console.log(that.graph[i].geometry);
-        // // console.log(that.graph[i].geometry);
-        // that.graph[i].geometry = that.graph[i].geometry;
-        // scene.add(that.graph[i]);
       });
-
-
     }
-
-    //  that.parentMesh.position.y = that.parentMesh.position.y+30000;
-    //
-    // that.boxGeometry = new THREE.BoxGeometry(50, 50, Math.random() * 100, 1, 1);
-    // that.cube = new THREE.Mesh(that.boxGeometry, that.planeMaterial);
-    //
-    // that.cube.posY = Math.random() *100;
-    //       that.cube.updateMatrix();
-    // that.mergedCubes.merge(that.cube.geometry, that.cube.matrix);
-
-    //  scene.remove(that.parentMesh);
-
-
-
-
   }
 };
 
@@ -651,172 +606,9 @@ function modular(server, metric, scale, cluster) {
   graph.init(server, metric, scale, cluster);
 }
 
-function buildGraph2(scale, cluster, server, metric) {
-
-  var planeMaterial,
-    planeGeometry,
-    box,
-    point,
-    face,
-    numberOfSides,
-    vertexIndex,
-    mergedCubes,
-    color,
-    curTimeStamp,
-    dayStamp,
-    curDay,
-    curHour,
-    hourStamp,
-    textGeometry,
-    textParams;
-
-  var boxGeometry;
-  var posZ = 0;
-  var posX = 0;
-  var posY = 0;
-  var size = 100;
-
-
-  mergedCubes = new THREE.Geometry();
-
-  planeMaterial = new THREE.MeshLambertMaterial({
-    color: 0xffffff,
-    shading: THREE.SmoothShading,
-    vertexColors: THREE.VertexColors
-  });
-  planeGeometry = new THREE.PlaneGeometry(6000, 6000, 50, 50);
-
-  parentMesh = new THREE.Mesh(mergedCubes, planeMaterial);
-  textParams = {
-    font: font,
-    size: 500,
-    height: 10
-  }
-
-  console.log('number of data points ' + points.length);
-  var start = new Date().getTime();
-  var counts = 0;
-  points.map(function(i) {
-    curTimeStamp = i.time;
-    curDay = curTimeStamp.split('T');
-    curHour = curDay[1].split(':');
-    curHour = curHour[0];
-    curDay = curDay[0];
-
-    if (curHour != hourStamp) {
-      hourStamp = curHour;
-      posX += 100;
-      posY = 0;
-
-      spritey = makeTextSprite(hourStamp, {
-        fontsize: 50,
-        borderColor: {
-          r: 255,
-          g: 0,
-          b: 0,
-          a: 1.0
-        },
-        backgroundColor: {
-          r: 255,
-          g: 100,
-          b: 100,
-          a: 0.8
-        }
-      });
-      spritey.position.set(posX - 10, posY - 500, 0);
-      spritey.updateMatrix();
-      scene.add(spritey);
-    }
-    if (curDay != dayStamp) {
-      dayStamp = curDay;
-      posX += 500;
-      posY = 0;
-    }
-
-    posZ = i.value * 10 * scale;
-    boxGeometry = new THREE.BoxGeometry(50, 50, posZ, 1, 1);
-
-    for (var m = 0; m < boxGeometry.faces.length; m++) {
-      counts++;
-      face = boxGeometry.faces[m];
-      face.color.setRGB((posZ / 10) * .01, 1 - ((posZ / 10) * .01), 0);
-    }
-
-    var cube = new THREE.Mesh(boxGeometry, planeMaterial);
-    var cid = cube.id;
-
-    cube.position.x = posX;
-    cube.position.y = posY;
-    cube.position.z = posZ / 2;
-
-    cube.updateMatrix();
-    cube.geometry.colorsNeedUpdate = true;
-
-    cube.timeStamp = i.time;
-    cube.scaleSize = scale;
-
-    objects.push(cube);
-
-    mergedCubes.merge(cube.geometry, cube.matrix);
-
-
-    /*  planeGeometry.vertices[i].z = Math.floor((Math.random() * 100));
-
-      var time = points[i].time;
-      time = time.split('T');
-
-      spritey = makeTextSprite( time[1],
-        { fontsize: 50,
-          borderColor: {r:255, g:0, b:0, a:1.0},
-          backgroundColor: {r:255, g:100, b:100, a:0.8}
-        } );
-      spritey.position.set(planeGeometry.vertices[i].x,planeGeometry.vertices[i].y,posZ+100);
-      //scene.add( spritey );
-      */
-    posY += 100;
-  });
-  var mergedCubesCenter = mergedCubes.center();
-  textParams.size = 500;
-
-  textGeometry = new THREE.TextGeometry(server + ' ' + metric, textParams);
-
-  for (var m = 0; m < textGeometry.faces.length; m++) {
-    counts++;
-    face = textGeometry.faces[m];
-    face.color.setRGB(0, 0, 0);
-  }
-
-  var textMesh1 = new THREE.Mesh(textGeometry, planeMaterial);
-
-  textMesh1.position.x = mergedCubesCenter.x;
-  textMesh1.position.y = mergedCubesCenter.y;
-  textMesh1.position.z = posZ / 2 + 1000;
-  textMesh1.rotation.x = Math.PI / 2;
-  textMesh1.rotation.y = Math.PI / 2;
-  textMesh1.updateMatrix();
-  mergedCubes.merge(textMesh1.geometry, textMesh1.matrix);
-
-  var end = new Date().getTime();
-  var time = end - start;
-  console.log('Execution time: ' + time);
-
-  parentMesh.position.y = cluster * 30000;
-  parentMesh.position.y = prevY + 10000;
-  prevY = parentMesh.position.y;
-  clusterPos.push(parentMesh);
-
-  scene.add(parentMesh);
-
-  textMesh1 = {};
-  mergedCubes = {};
-  parentMesh = {};
-  objects = [];
-}
-
 function wrapGrid() {
   var bb = new THREE.Box3().setFromObject(parentMesh);
   graphTWidth = graphTWidth + bb.max.x - bb.min.x;
-  console.log(graphTWidth);
   var gridOpts = {
     height: bb.max.x + 100,
     width: 500,
@@ -854,6 +646,7 @@ var render = function() {
 }
 
 function onDocumentMouseMove(event) {
+
   event.preventDefault();
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -863,19 +656,20 @@ function onDocumentMouseMove(event) {
   var numFaces = 0;
   var intersections;
 
-  intersections = raycaster.intersectObjects(objects);
-  numObjects = objects.length;
+  intersections = raycaster.intersectObjects(finalCubeObjects);
+  numObjects = finalCubeObjects.length;
   //  numFaces = totalFaces;
 
   if (intersections.length > 0) {
     if (intersected != intersections[0].object) {
+      console.log('inter');
       intersected = intersections[0].object;
       scene.remove(spritey);
 
-      var time = intersected.timeStamp;
-      time = time.split('T');
-      console.log(intersected.scaleSize);
-      spritey = makeTextSprite(time[0] + "/n" + time[1], {
+
+
+      console.log(intersected.metricValue);
+      spritey = makeTextSprite(intersected.metricValue, {
         fontsize: 50,
         borderColor: {
           r: 255,
@@ -889,8 +683,8 @@ function onDocumentMouseMove(event) {
           b: 100,
           a: 0.8
         }
-      });
-      spritey.position.set(intersected.position.x, intersected.position.y, intersected.position.z * 2);
+      }, 200);
+      spritey.position.set(intersected.position.x, intersected.position.y-50, intersected.position.z * 2);
       scene.add(spritey);
     }
     document.body.style.cursor = 'pointer';
