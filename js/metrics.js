@@ -348,13 +348,36 @@ var graph = {
     spritey.updateMatrix();
     scene.add(spritey);
     console.log('points ' + this.points.length);
-    that.hourStamp = '23';
+    that.firstRun = true;
     this.points.map(function(i) {
       that.curTimeStamp = i.time;
       that.curDay = that.curTimeStamp.split('T');
       that.curHour = that.curDay[1].split(':');
       that.curHour = that.curHour[0];
       that.curDay = that.curDay[0];
+      if(that.firstRun == true){
+        that.hourStamp = that.curHour;
+          var printHour = parseInt(that.curHour);
+        var spritey = makeTextSprite(printHour, {
+          fontsize: 50,
+          borderColor: {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 1.0
+          },
+          backgroundColor: {
+            r: 255,
+            g: 100,
+            b: 100,
+            a: 0.8
+          }
+        }, 250);
+        spritey.position.set(that.posX+600, that.posY-(2000-(that.graph.length*10000)), 0);
+        spritey.updateMatrix();
+        scene.add(spritey);
+        that.firstRun = false;
+      }
 
 
       if (that.curDay != that.dayStamp) {
