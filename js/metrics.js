@@ -130,20 +130,21 @@ function buildScene() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 999999999999);
   hemLight = new THREE.HemisphereLight(0xFFFFFF, 0xFFFFFF, .5);
-  pointLight = new THREE.PointLight(0xfffff, 1, 0);
-  pointLight2 = new THREE.PointLight(0xfffff, 5, 0);
-  pointLight3 = new THREE.PointLight(0xfffff, 5, 0);
-  pointLight4 = new THREE.PointLight(0xfffff, 5, 0);
+
+  pointLight = new THREE.PointLight(0xfffff, 8.5, 0);
+  pointLight2 = new THREE.PointLight(0xfffff,8.5, 0);
+  pointLight3 = new THREE.PointLight(0xfffff, 8.5, 0);
+  pointLight4 = new THREE.PointLight(0xfffff, 8.5, 0);
   renderer = new THREE.WebGLRenderer();
 
   axisHelper = new THREE.GridHelper(100000, 100);
-  sphere = new THREE.SphereGeometry(10, 16, 8);
+  sphere = new THREE.SphereGeometry(100, 160, 80);
 
-  var light = new THREE.AmbientLight(0x404040); // soft white light
-  //
+  // var light = new THREE.AmbientLight(0x404040); // soft white light
+  // //
   // pointLight.add(new THREE.Mesh(sphere,
   //   new THREE.MeshBasicMaterial({
-  //     color: 0xff0040
+  //     color: 0x222345
   //   })));
   // pointLight2.add(new THREE.Mesh(sphere,
   //   new THREE.MeshBasicMaterial({
@@ -151,11 +152,11 @@ function buildScene() {
   //   })));
   // pointLight3.add(new THREE.Mesh(sphere,
   //   new THREE.MeshBasicMaterial({
-  //     color: 0xff0040
+  //     color: 0x880040
   //   })));
   // pointLight4.add(new THREE.Mesh(sphere,
   //   new THREE.MeshBasicMaterial({
-  //     color: 0xff0040
+  //     color: 0xaa0040
   //   })));
 
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -174,19 +175,19 @@ function buildScene() {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   //controls = new THREE.FirstPersonControls(camera, renderer.domElement);
 
-  pointLight.position.set(300, 100, 0);
-  pointLight2.position.set(-300, 100, 0);
-  pointLight3.position.set(0, 100, 300);
-  pointLight4.position.set(0, 100, -300);
+  pointLight.position.set(0, 100, 0);
+  pointLight2.position.set(50000, 10000, 0);
+  pointLight3.position.set(50000, -10000, 0);
+  pointLight4.position.set(100000, 100, 0);
 
 
   scene.add(camera);
   scene.add(hemLight);
-  scene.add(pointLight);
-  scene.add(pointLight2);
-  scene.add(pointLight3);
+ scene.add(pointLight);
+  // scene.add(pointLight2);
+  // scene.add(pointLight3);
   scene.add(pointLight4);
-  scene.add(light);
+//  scene.add(light);
 }
 
 function createGrid(opts) {
@@ -241,11 +242,9 @@ var graph = {
   init: function(server, metric, scale, cluster) {
 
 
-    console.log('too');
     this.buildInitObjs();
     this.buildData(server, metric, scale, cluster);
 
-    console.log('fast');
 
   },
   buildInitObjs: function() {
@@ -349,6 +348,7 @@ var graph = {
     spritey.updateMatrix();
     scene.add(spritey);
     console.log('points ' + this.points.length);
+    that.hourStamp = '23';
     this.points.map(function(i) {
       that.curTimeStamp = i.time;
       that.curDay = that.curTimeStamp.split('T');
@@ -356,32 +356,6 @@ var graph = {
       that.curHour = that.curHour[0];
       that.curDay = that.curDay[0];
 
-      if (that.curHour != that.hourStamp) {
-
-        var printHour = parseInt(that.curHour)+1;
-        that.hourStamp = that.curHour;
-
-        that.posX += 100;
-        that.posY = 0;
-        var spritey = makeTextSprite(printHour, {
-          fontsize: 50,
-          borderColor: {
-            r: 255,
-            g: 0,
-            b: 0,
-            a: 1.0
-          },
-          backgroundColor: {
-            r: 255,
-            g: 100,
-            b: 100,
-            a: 0.8
-          }
-        }, 250);
-        spritey.position.set(that.posX-50, that.posY-(2000-(that.graph.length*10000)), 0);
-        spritey.updateMatrix();
-        scene.add(spritey);
-      }
 
       if (that.curDay != that.dayStamp) {
         that.dayStamp = that.curDay;
@@ -403,10 +377,39 @@ var graph = {
             a: 0.8
           }
         }, 350);
-        spritey.position.set(that.posX-50, that.posY+(2000+(that.graph.length*10000)), 0);
+        spritey.position.set(that.posX+100, that.posY+(2000+(that.graph.length*10000)), 0);
         spritey.updateMatrix();
         scene.add(spritey);
       }
+
+      if (that.curHour != that.hourStamp) {
+
+        var printHour = parseInt(that.curHour);
+        that.hourStamp = that.curHour;
+
+        that.posX += 100;
+        that.posY = 0;
+        var spritey = makeTextSprite(printHour, {
+          fontsize: 50,
+          borderColor: {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 1.0
+          },
+          backgroundColor: {
+            r: 255,
+            g: 100,
+            b: 100,
+            a: 0.8
+          }
+        }, 250);
+        spritey.position.set(that.posX+100, that.posY-(2000-(that.graph.length*10000)), 0);
+        spritey.updateMatrix();
+        scene.add(spritey);
+      }
+
+
 
       that.posZ = i.value * 10 * scale;
       that.boxGeometry = new THREE.BoxGeometry(50, 50, that.posZ, 1, 1);
@@ -467,7 +470,7 @@ var graph = {
 
     this.cubeObjects.map(function(cube){
        cube.position.y += that.parentMesh.position.y-1750;
-       cube.position.x -= 90;
+       //cube.position.x -= 90;
        //cube.position.z += that.oldPMZ;
        cube.verticesNeedUpdate = true;
        cube.elementsNeedUpdate = true;
@@ -534,7 +537,7 @@ var graph = {
       }
       //  scene.remove(that.graph[i]);
 
-      var planeMaterial = new THREE.MeshLambertMaterial({
+      var planeMaterial = new THREE.MeshPhongMaterial({
         color: 0xffffff,
         vertexColors: THREE.VertexColors
       });
@@ -662,13 +665,9 @@ function onDocumentMouseMove(event) {
 
   if (intersections.length > 0) {
     if (intersected != intersections[0].object) {
-      console.log('inter');
       intersected = intersections[0].object;
       scene.remove(spritey);
 
-
-
-      console.log(intersected.metricValue);
       spritey = makeTextSprite(intersected.metricValue, {
         fontsize: 50,
         borderColor: {
